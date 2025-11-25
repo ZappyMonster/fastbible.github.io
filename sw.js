@@ -1,9 +1,11 @@
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `fastbible-${CACHE_VERSION}`;
 
 const ASSETS = [
   './',
   './index.html',
+  './style.css',
+  './app.js',
   './esv-bible-2001.json',
   './hgb-utf8.json',
   'https://unpkg.com/lunr/lunr.js'
