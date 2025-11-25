@@ -128,6 +128,13 @@ const t = (key, param) => {
     return typeof value === 'function' ? value(param) : value;
 };
 
+// HTML escaping to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // DOM Elements
 const elements = {
     content: document.getElementById('content'),
@@ -323,8 +330,8 @@ function displayBook(bookIndex, updateUrl = true) {
         const verseNum = verse.verse.split(':')[1] || verse.verse;
         
         html += `<div class="verse">
-            <span class="verse-num" onclick="updateVerseUrl('${verse.book}', '${verse.verse}')">${verseNum}</span>
-            ${verse.text}
+            <span class="verse-num" onclick="updateVerseUrl('${escapeHtml(verse.book)}', '${escapeHtml(verse.verse)}')">${escapeHtml(verseNum)}</span>
+            ${escapeHtml(verse.text)}
         </div>`;
     });
     
@@ -410,22 +417,78 @@ function searchByText(query) {
 }
 
 function searchByReference(match) {
-    // Logic similar to original, simplified for brevity
-    // In a real app, I'd implement the full parsing logic here
-    // For now, let's just do a text search as fallback to keep it robust
-    searchByText(match[0]); 
+    // match: [full, bookName, chapter, verseStart, verseEnd?]
+    const bookName = match[1].trim();
+    const chapter = match[2];
+    const verseStart = parseInt(match[3], 10);
+    const verseEnd = match[4] ? parseInt(match[4], 10) : verseStart;
+    
+    // Find book by name (supports both English and Chinese)
+    const bookInfo = state.bookList.find(b => 
+        b.english.toLowerCase() === bookName.toLowerCase() ||
+        b.book === bookName ||
+        b.english.toLowerCase().startsWith(bookName.toLowerCase()) ||
+        b.book.startsWith(bookName)
+    );
+    
+    if (!bookInfo) {
+        // Fallback to text search if book not found
+        searchByText(match[0]);
+        return;
+    }
+    
+    const bookCode = state.bookCodeMap[bookInfo.english];
+    
+    // Filter verses by book and chapter:verse range
+    const results = state.bibleData.filter(verse => {
+        if (verse.book !== bookCode) return false;
+        const [vChapter, vVerse] = verse.verse.split(':');
+        if (vChapter !== chapter) return false;
+        const verseNum = parseInt(vVerse, 10);
+        return verseNum >= verseStart && verseNum <= verseEnd;
+    });
+    
+    displaySearchResults(results, match[0]);
 }
 
 function searchByChapter(match) {
-     // Logic similar to original, simplified for brevity
-    searchByText(match[0]);
+    // match: [full, bookName, chapter]
+    const bookName = match[1].trim();
+    const chapter = match[2];
+    
+    // Find book by name (supports both English and Chinese)
+    const bookInfo = state.bookList.find(b => 
+        b.english.toLowerCase() === bookName.toLowerCase() ||
+        b.book === bookName ||
+        b.english.toLowerCase().startsWith(bookName.toLowerCase()) ||
+        b.book.startsWith(bookName)
+    );
+    
+    if (!bookInfo) {
+        // Fallback to text search if book not found
+        searchByText(match[0]);
+        return;
+    }
+    
+    const bookCode = state.bookCodeMap[bookInfo.english];
+    
+    // Filter all verses in the specified chapter
+    const results = state.bibleData.filter(verse => {
+        if (verse.book !== bookCode) return false;
+        const vChapter = verse.verse.split(':')[0];
+        return vChapter === chapter;
+    });
+    
+    displaySearchResults(results, match[0]);
 }
 
 function highlightText(text, query) {
-    if (!query || query.length < 2) return text;
-    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Escape HTML first to prevent XSS, then apply highlighting
+    const safeText = escapeHtml(text);
+    if (!query || query.length < 2) return safeText;
+    const escapedQuery = escapeHtml(query).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(${escapedQuery})`, 'gi');
-    return text.replace(regex, '<span class="highlight">$1</span>');
+    return safeText.replace(regex, '<span class="highlight">$1</span>');
 }
 
 function displaySearchResults(results, query) {
@@ -442,8 +505,8 @@ function displaySearchResults(results, query) {
         const highlightedText = highlightText(verse.text, query);
         html += `<div class="verse search-result">
             <div class="result-meta">
-                <span class="result-book">${bookName}</span>
-                <span class="result-verse">${verse.verse}</span>
+                <span class="result-book">${escapeHtml(bookName)}</span>
+                <span class="result-verse">${escapeHtml(verse.verse)}</span>
             </div>
             <div class="result-text">${highlightedText}</div>
         </div>`;
@@ -454,8 +517,15 @@ function displaySearchResults(results, query) {
 }
 
 // Global scope for onclick handlers
-window.updateVerseUrl = function(book, verse) {
+window.updateVerseUrl = function(bookCode, verse) {
+    // Look up the book name from the book code
+    const bookInfo = state.bookList.find(b => state.bookCodeMap[b.english] === bookCode);
+    
     const url = new URL(window.location);
+    if (bookInfo) {
+        url.searchParams.set('book', bookInfo.english.toLowerCase().replace(/\s+/g, '-'));
+    }
     url.searchParams.set('verse', verse);
+    url.searchParams.delete('search');
     history.pushState(null, '', url);
 };
