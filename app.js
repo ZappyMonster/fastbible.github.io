@@ -162,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Register Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js')
-            .then(reg => console.log('Service Worker registered', reg))
             .catch(err => console.error('Service Worker registration failed', err));
     }
 });
@@ -280,23 +279,34 @@ function loadFirstBook() {
 }
 
 function scrollToVerse(verseRef) {
-    setTimeout(() => {
-        // verseRef could be "3:16" or just "16"
-        const targetVerse = verseRef.includes(':') ? verseRef.split(':')[1] : verseRef;
-        const verseElements = document.querySelectorAll('.verse-num');
-        
-        for (let elem of verseElements) {
-            if (elem.textContent === targetVerse) {
-                elem.parentElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                elem.parentElement.classList.add('verse-highlight');
-                setTimeout(() => elem.parentElement.classList.remove('verse-highlight'), 2500);
-                break;
+    // Use requestAnimationFrame to ensure DOM is ready, then add a small delay
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            // Find the verse element by iterating through all verses and comparing data-verse attribute
+            const allVerses = document.querySelectorAll('.verse[data-verse]');
+            let verseElement = null;
+            
+            for (let elem of allVerses) {
+                if (elem.dataset.verse === verseRef) {
+                    verseElement = elem;
+                    break;
+                }
             }
-        }
-    }, 500);
+            
+            if (verseElement) {
+                // Use getBoundingClientRect and window.scrollTo for more reliable scrolling
+                const rect = verseElement.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const targetY = rect.top + scrollTop - (window.innerHeight / 2);
+                window.scrollTo({ top: targetY, behavior: 'instant' });
+                verseElement.classList.add('verse-highlight');
+                setTimeout(() => verseElement.classList.remove('verse-highlight'), 2500);
+            }
+        }, 150);
+    });
 }
 
-function displayBook(bookIndex, updateUrl = true) {
+function displayBook(bookIndex, updateUrl = true, skipScrollToTop = false) {
     const bookInfo = state.bookList[bookIndex];
     const bookCode = state.bookCodeMap[bookInfo.english];
     const bookVerses = state.bibleData.filter(verse => verse.book === bookCode);
@@ -329,14 +339,16 @@ function displayBook(bookIndex, updateUrl = true) {
         // Extract just the verse number for display
         const verseNum = verse.verse.split(':')[1] || verse.verse;
         
-        html += `<div class="verse">
+        html += `<div class="verse" data-verse="${escapeHtml(verse.verse)}">
             <span class="verse-num" onclick="updateVerseUrl('${escapeHtml(verse.book)}', '${escapeHtml(verse.verse)}')">${escapeHtml(verseNum)}</span>
             ${escapeHtml(verse.text)}
         </div>`;
     });
     
     elements.content.innerHTML = html;
-    window.scrollTo(0, 0);
+    if (!skipScrollToTop) {
+        window.scrollTo(0, 0);
+    }
 }
 
 // Search Logic
@@ -503,7 +515,7 @@ function displaySearchResults(results, query) {
     results.forEach(verse => {
         const bookName = getBookName(verse.book);
         const highlightedText = highlightText(verse.text, query);
-        html += `<div class="verse search-result">
+        html += `<div class="verse search-result" onclick="jumpToVerse('${escapeHtml(verse.book)}', '${escapeHtml(verse.verse)}')" onkeydown="handleResultKeydown(event, '${escapeHtml(verse.book)}', '${escapeHtml(verse.verse)}')" role="button" tabindex="0">
             <div class="result-meta">
                 <span class="result-book">${escapeHtml(bookName)}</span>
                 <span class="result-verse">${escapeHtml(verse.verse)}</span>
@@ -528,4 +540,39 @@ window.updateVerseUrl = function(bookCode, verse) {
     url.searchParams.set('verse', verse);
     url.searchParams.delete('search');
     history.pushState(null, '', url);
+};
+
+window.jumpToVerse = function(bookCode, verseRef) {
+    // Find the book index from the book code
+    const bookIndex = state.bookList.findIndex(b => state.bookCodeMap[b.english] === bookCode);
+    
+    if (bookIndex === -1) {
+        console.error('Book not found:', bookCode);
+        return;
+    }
+    
+    // Update the book select dropdown
+    elements.bookSelect.value = bookIndex;
+    
+    // Display the book (updateUrl = false since we'll set URL with verse, skipScrollToTop = true)
+    displayBook(bookIndex, false, true);
+    
+    // Update URL with both book and verse
+    const bookInfo = state.bookList[bookIndex];
+    const url = new URL(window.location);
+    url.searchParams.set('book', bookInfo.english.toLowerCase().replace(/\s+/g, '-'));
+    url.searchParams.set('verse', verseRef);
+    url.searchParams.delete('search');
+    history.pushState(null, '', url);
+    
+    // Scroll to the specific verse after a short delay to allow rendering
+    scrollToVerse(verseRef);
+};
+
+window.handleResultKeydown = function(event, bookCode, verseRef) {
+    // Allow Enter or Space to trigger the jump
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        jumpToVerse(bookCode, verseRef);
+    }
 };

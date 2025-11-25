@@ -433,10 +433,24 @@ h1.book-title::after {
     padding-left: 1rem;
     margin-bottom: 1.25rem;
     border-left: 3px solid var(--primary-light);
+    cursor: pointer;
+    transition: var(--transition);
 }
 
 .verse.search-result:hover {
     border-left-color: var(--primary);
+    background: rgba(102, 126, 234, 0.12);
+    transform: translateX(4px);
+}
+
+.verse.search-result:active {
+    transform: translateX(2px);
+    background: rgba(102, 126, 234, 0.18);
+}
+
+.verse.search-result:focus-visible {
+    border-left-color: var(--primary);
+    background: rgba(102, 126, 234, 0.12);
 }
 
 .result-meta {

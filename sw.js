@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v13';
 const CACHE_NAME = `fastbible-${CACHE_VERSION}`;
 
 const ASSETS = [
@@ -31,9 +31,10 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request)
+  // Use network-first for JavaScript files to ensure latest code
+  if (event.request.url.endsWith('.js')) {
+    event.respondWith(
+      fetch(event.request)
         .then(fetchResponse => {
           if (fetchResponse.ok) {
             return caches.open(CACHE_NAME)
@@ -44,7 +45,25 @@ self.addEventListener('fetch', event => {
           }
           return fetchResponse;
         })
-      )
-      .catch(() => caches.match('./index.html'))
-  );
+        .catch(() => caches.match(event.request))
+    );
+  } else {
+    // Cache-first for other assets
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => response || fetch(event.request)
+          .then(fetchResponse => {
+            if (fetchResponse.ok) {
+              return caches.open(CACHE_NAME)
+                .then(cache => {
+                  cache.put(event.request, fetchResponse.clone());
+                  return fetchResponse;
+                });
+            }
+            return fetchResponse;
+          })
+        )
+        .catch(() => caches.match('./index.html'))
+    );
+  }
 });
