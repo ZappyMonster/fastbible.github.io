@@ -150,7 +150,8 @@ const elements = {
     searchTipsTitle: document.getElementById('searchTipsTitle'),
     tipVerse: document.getElementById('tipVerse'),
     tipChapter: document.getElementById('tipChapter'),
-    tipText: document.getElementById('tipText')
+    tipText: document.getElementById('tipText'),
+    brandLogo: document.getElementById('brandLogo')
 };
 
 // Initialization
@@ -189,6 +190,15 @@ function initEventListeners() {
 
     elements.searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performSearch();
+    });
+
+    // Brand logo click - return to selected book
+    elements.brandLogo.addEventListener('click', returnToSelectedBook);
+    elements.brandLogo.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            returnToSelectedBook();
+        }
     });
 }
 
@@ -348,6 +358,14 @@ function displayBook(bookIndex, updateUrl = true, skipScrollToTop = false) {
     elements.content.innerHTML = html;
     if (!skipScrollToTop) {
         window.scrollTo(0, 0);
+    }
+}
+
+// Return to selected book when clicking brand logo
+function returnToSelectedBook() {
+    const selectedBookIndex = elements.bookSelect.value;
+    if (selectedBookIndex !== "") {
+        displayBook(parseInt(selectedBookIndex));
     }
 }
 

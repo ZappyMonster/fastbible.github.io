@@ -86,6 +86,20 @@ body {
     background-clip: text;
     color: transparent;
     letter-spacing: -0.5px;
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+
+.brand:hover {
+    background: linear-gradient(to right, #fff, #fff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    transform: scale(1.02);
+}
+
+.brand:active {
+    transform: scale(0.98);
 }
 
 .nav-controls {
