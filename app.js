@@ -144,6 +144,7 @@ const elements = {
     searchOverlay: document.getElementById('searchOverlay'),
     searchToggleBtn: document.getElementById('searchToggleBtn'),
     closeSearchBtn: document.getElementById('closeSearchBtn'),
+    clearSearchBtn: document.getElementById('clearSearchBtn'),
     searchEntireCheckbox: document.getElementById('searchEntireBible'),
     searchToggleLabel: document.getElementById('searchToggleLabel'),
     searchEntireLabel: document.getElementById('searchEntireLabel'),
@@ -192,6 +193,16 @@ function initEventListeners() {
         if (e.key === 'Enter') performSearch();
     });
 
+    // Clear search button
+    elements.clearSearchBtn.addEventListener('click', () => {
+        elements.searchInput.value = '';
+        elements.searchInput.focus();
+        toggleClearButton();
+    });
+
+    // Show/hide clear button based on input value
+    elements.searchInput.addEventListener('input', toggleClearButton);
+
     // Brand logo click - return to selected book
     elements.brandLogo.addEventListener('click', returnToSelectedBook);
     elements.brandLogo.addEventListener('keydown', (e) => {
@@ -200,6 +211,14 @@ function initEventListeners() {
             returnToSelectedBook();
         }
     });
+}
+
+function toggleClearButton() {
+    if (elements.searchInput.value.trim().length > 0) {
+        elements.clearSearchBtn.style.display = 'flex';
+    } else {
+        elements.clearSearchBtn.style.display = 'none';
+    }
 }
 
 function updateUIText() {
@@ -374,7 +393,10 @@ function toggleSearch() {
     elements.searchOverlay.classList.toggle('active');
     document.body.classList.toggle('no-scroll', elements.searchOverlay.classList.contains('active'));
     if (elements.searchOverlay.classList.contains('active')) {
-        setTimeout(() => elements.searchInput.focus(), 100);
+        setTimeout(() => {
+            elements.searchInput.focus();
+            toggleClearButton();
+        }, 100);
     } else {
         elements.searchInput.blur();
     }

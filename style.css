@@ -493,7 +493,7 @@ h1.book-title::after {
 
 .search-input {
     width: 100%;
-    padding: 16px 22px 16px 50px;
+    padding: 16px 50px 16px 50px;
     font-size: 1.15rem;
     border: 2px solid #e2e8f0;
     border-radius: var(--radius-md);
@@ -515,6 +515,38 @@ h1.book-title::after {
     top: 50%;
     transform: translateY(-50%);
     color: #a0aec0;
+}
+
+.clear-search-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #dc2626;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+
+.clear-search-btn:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: #b91c1c;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.clear-search-btn:active {
+    transform: translateY(-50%) scale(0.95);
 }
 
 .search-tips {
@@ -801,7 +833,7 @@ h1.book-title::after {
     
     .search-input {
         font-size: 1rem;
-        padding: 12px 15px 12px 40px;
+        padding: 12px 40px 12px 40px;
     }
     
     .search-controls {
